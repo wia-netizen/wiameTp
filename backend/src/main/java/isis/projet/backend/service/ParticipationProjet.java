@@ -1,53 +1,68 @@
 package isis.projet.backend.service;
 
-import isis.projet.backend.dao.ParticipationDAO;
+import isis.projet.backend.dao.ParticipationRepository;
 import isis.projet.backend.dao.PersonneRepository;
 import isis.projet.backend.dao.ProjetRepository;
 import isis.projet.backend.entity.Participation;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.NoSuchElementException;
 
 @Service
 public class ParticipationProjet {
-    private static final Logger logger = LoggerFactory.getLogger(ParticipationProjet.class);
-
     private final PersonneRepository personneDao;
     private final ProjetRepository projetDao;
-    private final ParticipationDAO participationDAO;  // Utilisation du DAO
+    private final ParticipationRepository participationDao;
 
-    public ParticipationProjet(PersonneRepository personneDao, ProjetRepository projetDao, ParticipationDAO participationDAO) {
+    public ParticipationProjet(PersonneRepository personneDao, ProjetRepository projetDao, ParticipationRepository participationDao) {
         this.projetDao = projetDao;
         this.personneDao = personneDao;
-        this.participationDAO = participationDAO;
+        this.participationDao = participationDao;
     }
 
+    /**
+     * Enregistre la participation d'une personne (connue par son matricule) à un projet (connu par son code)
+     * en précisant son rôle et le pourcentage de son temps qu'il consacre à ce projet.
+     * @param matricule Identifiant de la personne
+     * @param codeProjet Identifiant du projet
+     * @param role Rôle de la personne dans le projet
+     * @param pourcentage Pourcentage de temps consacré au projet
+     * @return La participation enregistrée
+     * @throws IllegalStateException si la personne participerait à plus de 3 projets en même temps
+     * @throws IllegalStateException si la personne consacrerait plus de 100% de son temps à des projets
+     * @throws IllegalStateException si le projet est déjà terminé
+     * @throws DataIntegrityViolationException si la personne participe déjà au projet
+     * @throws NoSuchElementException si la personne ou le projet n'existe pas
+     */
     @Transactional
     public Participation enregistrerParticipation(Integer matricule, Integer codeProjet, String role, float pourcentage) {
-        logger.info("Début de l'enregistrement d'une participation : matricule={}, projet={}, rôle={}, pourcentage={}",
-                matricule, codeProjet, role, pourcentage);
-
-        var affectation = projetDao.findById(codeProjet)
-                .orElseThrow(() -> new NoSuchElementException("Projet non trouvé avec le code : " + codeProjet));
-
+        // On cherche le projet auquel la personne participe
+        var affectation = projetDao.findById(codeProjet).orElseThrow();
         if (affectation.getFin() != null) {
             throw new IllegalStateException("Le projet est terminé");
         }
-
-        var contributeur = personneDao.findById(matricule)
-                .orElseThrow(() -> new NoSuchElementException("Personne non trouvée avec le matricule : " + matricule));
-
-        var existingParticipation = participationDAO.findByPersonneAndProjet(matricule, codeProjet);
-        if (existingParticipation.isPresent()) {
-            throw new IllegalStateException("Cette personne participe déjà à ce projet.");
-        }
-
+        // On cherche la personne qui participe
+        var contributeur = personneDao.findById(matricule).orElseThrow();
+        // On cherche les infos sur la participation de la personne à des projets en cours
+        var infos = personneDao.findParticipationInfoByMatricule(matricule);
+        infos.ifPresent( // Si la personne participe déjà à des projets en cours
+                participation -> {
+                    if (participation.getNombre() >= 3) {
+                        throw new IllegalStateException("La personne ne peut pas participer à plus de 3 projets en même temps");
+                    }
+                    if (participation.getPourcentage() + pourcentage > 1.0f) {
+                        throw new IllegalStateException("La personne ne peut pas consacrer plus de 100% de son temps à des projets");
+                    }
+                }
+        );
+        // On crée la participation
         var participation = new Participation(role, pourcentage, affectation, contributeur);
-        participationDAO.save(participation);
-
-        logger.info("Participation enregistrée avec succès : {}", participation);
+        // on l'enregistre dans la base de données
+        participationDao.save(participation);
         return participation;
     }
+
+
 }

@@ -1,10 +1,14 @@
 package isis.projet.backend.controller;
 
+import isis.projet.backend.controller.ParticipationCreationDTO;
+import isis.projet.backend.controller.ParticipationDTO;
+import isis.projet.backend.entity.Participation;
 import isis.projet.backend.service.ParticipationProjet;
+import org.modelmapper.ModelMapper;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.modelmapper.ModelMapper;
+
 import java.util.NoSuchElementException;
 
 @RestController
@@ -22,25 +26,22 @@ public class ParticipationController {
     /**
      * Enregistre une participation d'une personne à un projet.
      *
-     * @param matricule   Identifiant de la personne
-     * @param codeProjet  Identifiant du projet
-     * @param role        Rôle de la personne dans le projet
-     * @param pourcentage Pourcentage de temps consacré au projet
-     * @return Réponse HTTP
+     * @param dto Contient le matricule de la personne, le code du projet, le rôle et le pourcentage
+     * @return Réponse HTTP avec la participation créée ou un message d'erreur
      */
     @PostMapping
-    public ResponseEntity<?> enregistrerParticipation(
-            @RequestParam Integer matricule,
-            @RequestParam Integer codeProjet,
-            @RequestParam String role,
-            @RequestParam float pourcentage) {
+    public ResponseEntity<?> enregistrerParticipation(@RequestBody ParticipationCreationDTO dto) {
         try {
-            // On appelle le service métier
-            var participation = participationService.enregistrerParticipation(matricule, codeProjet, role, pourcentage);
-            // On renvoie la participation créée sous la forme d'un DTO
-            var body = mapper.map(participation, ParticipationDTO.class);
+            // Appel du service métier
+            Participation participation = participationService.enregistrerParticipation(
+                    dto.getMatricule(),
+                    dto.getCodeProjet(),
+                    dto.getRole(),
+                    dto.getPourcentage()
+            );
+            // Transformation de l'entité en DTO d'affichage
+            ParticipationDTO body = mapper.map(participation, ParticipationDTO.class);
             return ResponseEntity.ok(body);
-            // En cas d'erreur, on renvoie des informations sur l'erreur pour le frontend
         } catch (NoSuchElementException | IllegalStateException e) {
             return ResponseEntity.badRequest().body(new ApiErrorDTO(e.getMessage()));
         } catch (DataIntegrityViolationException e) {

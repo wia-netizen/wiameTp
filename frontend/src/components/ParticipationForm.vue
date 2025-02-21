@@ -1,121 +1,109 @@
-<template>
-  <div class="container">
-    <h2>Enregistrer une participation</h2>
+<script setup>
+import { ref } from 'vue';
 
-    <!-- Sélection de la personne -->
-    <label>Personne</label>
-    <select v-model="selectedPerson">
-      <option v-for="person in persons" :key="person.matricule" :value="person.matricule">
-        {{ person.prenom }} {{ person.nom }}
-      </option>
-    </select>
+const participation = ref({
+  personne: '',
+  projet: '',
+  role: '',
+  pourcentage: 10
+});
 
-    <!-- Sélection du projet -->
-    <label>Projet</label>
-    <select v-model="selectedProject">
-      <option v-for="project in projects" :key="project.id" :value="project.id">
-        {{ project.nom }}
-      </option>
-    </select>
+// Options des personnes et projets (à remplacer avec des données dynamiques si besoin)
+const personnes = ref([
+  { id: 1, nom: 'John Doe' },
+  { id: 2, nom: 'Jane Smith' }
 
-    <!-- Rôle -->
-    <label>Rôle</label>
-    <input type="text" v-model="role" placeholder="Développeur">
+]);
 
-    <!-- Pourcentage -->
-    <label>Pourcentage</label>
-    <input type="range" v-model="percentage" min="10" max="100" step="10">
-    <span>{{ percentage }}%</span>
+const projets = ref([
+  { id: 1, nom: 'Projet 1 (en cours)' },
+  { id: 2, nom: 'Projet 2 (terminé)' },
+  { id: 3, nom: 'Projet 3 (en cours)'}
+]);
 
-    <!-- Bouton Enregistrer -->
-    <button @click="submitParticipation">Enregistrer</button>
-
-    <!-- Affichage des erreurs -->
-    <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
-  </div>
-</template>
-
-<script>
-import axios from 'axios';
-
-export default {
-  data() {
-    return {
-      persons: [],
-      projects: [],
-      selectedPerson: null,
-      selectedProject: null,
-      role: '',
-      percentage: 10,
-      errorMessage: ''
-    };
-  },
-  mounted() {
-    this.fetchPersons();
-    this.fetchProjects();
-  },
-  methods: {
-    async fetchPersons() {
-      try {
-        const response = await axios.get('/api/gestion/personnes');
-        this.persons = response.data;
-      } catch (error) {
-        console.error("Erreur lors du chargement des personnes", error);
-      }
-    },
-    async fetchProjects() {
-      try {
-        const response = await axios.get('/api/gestion/projets');
-        this.projects = response.data.filter(p => !p.fin); // Filtrer les projets non terminés
-      } catch (error) {
-        console.error("Erreur lors du chargement des projets", error);
-      }
-    },
-    async submitParticipation() {
-      try {
-        await axios.post('/api/gestion/participation', {
-          matricule: this.selectedPerson,
-          codeProjet: this.selectedProject,
-          role: this.role,
-          pourcentage: this.percentage / 100 // Stocké sous forme décimale
-        });
-        alert("Participation enregistrée avec succès !");
-        this.errorMessage = '';
-      } catch (error) {
-        this.errorMessage = error.response?.data?.message || "Une erreur est survenue.";
-      }
-    }
-  }
+const submitForm = () => {
+  console.log('Participation soumise:', participation.value);
 };
 </script>
 
-<style>
-.container {
-  width: 300px;
-  margin: auto;
+<template>
+  <div class="form-container">
+    <h2>Enregistrer une participation</h2>
+
+    <form @submit.prevent="submitForm">
+      <label>Personne</label>
+      <select v-model="participation.personne">
+        <option v-for="personne in personnes" :key="personne.id" :value="personne.nom">
+          {{ personne.nom }}
+        </option>
+      </select>
+
+      <label>Projet</label>
+      <select v-model="participation.projet">
+        <option v-for="projet in projets" :key="projet.id" :value="projet.nom">
+          {{ projet.nom }}
+        </option>
+      </select>
+
+      <label>Rôle</label>
+      <input v-model="participation.role" type="text" placeholder="Ex: Développeur" required />
+
+      <label>Pourcentage</label>
+      <input v-model="participation.pourcentage" type="range" min="0" max="100" step="5" />
+      <p>{{ participation.pourcentage }}%</p>
+
+      <button type="submit">Enregistrer</button>
+    </form>
+  </div>
+</template>
+
+<style scoped>
+.form-container {
+  background: white;
   padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+  border-radius: 8px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  max-width: 350px;
+  margin: auto;
 }
+
+h2 {
+  font-size: 20px;
+  margin-bottom: 15px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+}
+
 label {
-  display: block;
+  font-weight: bold;
   margin-top: 10px;
 }
+
 input, select {
-  width: 100%;
+  padding: 8px;
   margin-top: 5px;
-  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
+
+input[type="range"] {
+  margin-top: 10px;
+}
+
 button {
-  background-color: blue;
-  color: white;
-  padding: 10px;
   margin-top: 15px;
-  width: 100%;
+  padding: 10px;
+  background-color: #007bff;
+  color: white;
   border: none;
+  border-radius: 4px;
   cursor: pointer;
 }
-.error {
-  color: red;
+
+button:hover {
+  background-color: #0056b3;
 }
 </style>
