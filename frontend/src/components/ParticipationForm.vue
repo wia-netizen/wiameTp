@@ -8,18 +8,24 @@ const participation = ref({
   pourcentage: 10
 });
 
-// Options des personnes et projets (à remplacer avec des données dynamiques si besoin)
+// Options des personnes et projets
+import { watchEffect } from 'vue';
+
 const personnes = ref([
   { id: 1, nom: 'John Doe' },
   { id: 2, nom: 'Jane Smith' }
-
 ]);
 
 const projets = ref([
   { id: 1, nom: 'Projet 1 (en cours)' },
   { id: 2, nom: 'Projet 2 (terminé)' },
-  { id: 3, nom: 'Projet 3 (en cours)'}
+  { id: 3, nom: 'Projet 3 (en cours)' }
 ]);
+
+watchEffect(() => {
+  console.log('Personnes disponibles:', personnes.value);
+  console.log('Projets disponibles:', projets.value);
+});
 
 const submitForm = () => {
   console.log('Participation soumise:', participation.value);
@@ -62,7 +68,7 @@ const submitForm = () => {
   background: white;
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   max-width: 350px;
   margin: auto;
 }
